@@ -21,10 +21,13 @@ logger = logging.getLogger(__name__)
 # Configuration from environment variables
 RTSP_URL = os.getenv('RTSP_URL', 'rtsp://example.com/stream')
 OUTPUT_DIR = os.getenv('OUTPUT_DIR', '/screenshots')
-PRELOAD_TIME = int(os.getenv('PRELOAD_TIME', '60'))  # seconds to preload stream
-SLEEP_TIME = int(os.getenv('SLEEP_TIME', '60'))  # seconds between screenshots (1 minute)
+PRELOAD_TIME = int(os.getenv('PRELOAD_TIME', '10'))  # seconds to preload stream
+CYCLE_TIME = int(os.getenv('CYCLE_TIME', '60'))  # total seconds for one complete cycle
 IMAGE_WIDTH = int(os.getenv('IMAGE_WIDTH', '1920'))
 IMAGE_HEIGHT = int(os.getenv('IMAGE_HEIGHT', '1080'))
+
+# Calculate actual sleep time (cycle time minus preload time)
+SLEEP_TIME = max(0, CYCLE_TIME - PRELOAD_TIME)  # Ensure non-negative
 
 def ensure_output_dir():
     """Create output directory if it doesn't exist."""
@@ -90,15 +93,16 @@ def main():
     logger.info("=== Time-lapse Screenshot Capture Service ===")
     logger.info(f"RTSP URL: {RTSP_URL}")
     logger.info(f"Preload time: {PRELOAD_TIME}s")
-    logger.info(f"Sleep time between captures: {SLEEP_TIME}s")
+    logger.info(f"Cycle time (total): {CYCLE_TIME}s")
+    logger.info(f"Sleep time (after capture): {SLEEP_TIME}s")
     logger.info(f"Output resolution: {IMAGE_WIDTH}x{IMAGE_HEIGHT}")
     
     ensure_output_dir()
     
-    # Calculate total cycle time
-    cycle_time = PRELOAD_TIME + SLEEP_TIME
-    logger.info(f"Total cycle time: {cycle_time}s per screenshot")
-    logger.info(f"Time-lapse ratio: 1 day = ~{1440/SLEEP_TIME:.1f} screenshots")
+    # Calculate screenshots per day
+    screenshots_per_day = (24 * 60 * 60) / CYCLE_TIME
+    logger.info(f"Screenshots per day: ~{screenshots_per_day:.0f}")
+    logger.info(f"Time-lapse ratio (at 24fps): 1 day = ~{screenshots_per_day/24:.1f} seconds of video")
     
     while True:
         try:

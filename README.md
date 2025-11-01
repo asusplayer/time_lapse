@@ -47,22 +47,27 @@ All settings can be configured via environment variables in `docker-compose.yml`
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `RTSP_URL` | `rtsp://example.com/stream` | Your RTSP stream URL |
-| `PRELOAD_TIME` | `60` | Seconds to preload stream before capture |
-| `SLEEP_TIME` | `60` | Seconds between screenshots |
+| `PRELOAD_TIME` | `10` | Seconds to preload stream before capture |
+| `CYCLE_TIME` | `60` | Total seconds per complete cycle (preload + capture + sleep) |
 | `IMAGE_WIDTH` | `1920` | Screenshot width in pixels |
 | `IMAGE_HEIGHT` | `1080` | Screenshot height in pixels |
 | `OUTPUT_DIR` | `/screenshots` | Output directory (inside container) |
 
+**Note:** Actual sleep time = `CYCLE_TIME - PRELOAD_TIME` (automatically calculated)
+
 ### Time-lapse Calculation
 
-With default settings (60-second intervals):
+With default settings (60-second cycle time):
 - **1 day** (24 hours) = 1,440 screenshots
 - At **24 fps**: 1,440 frames = **60 seconds** of video
 - At **30 fps**: 1,440 frames = **48 seconds** of video
 
-To adjust the time-lapse ratio, modify `SLEEP_TIME`:
+To adjust the time-lapse ratio, modify `CYCLE_TIME`:
 - 30 seconds → 1 day = ~2 minutes of video
 - 120 seconds → 1 day = ~30 seconds of video
+
+**Example:** For 1 day = 2 minutes of video at 24fps:
+- Set `CYCLE_TIME=30` (captures 2,880 screenshots per day)
 
 ## TrueNAS Scale Deployment
 
@@ -125,8 +130,10 @@ network_mode: host
 
 For unstable connections, increase the preload time:
 ```yaml
-- PRELOAD_TIME=120  # 2 minutes preload
+- PRELOAD_TIME=20  # 20 seconds preload
+- CYCLE_TIME=60    # Keep same cycle time
 ```
+This gives more time for connection stability while maintaining the same screenshot frequency.
 
 ## Creating the Time-lapse Video
 

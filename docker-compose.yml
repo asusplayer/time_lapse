@@ -11,13 +11,14 @@ services:
       - RTSP_URL=${RTSP_URL:-rtsp://example.com/stream}
       
       # Time to preload stream before capturing (in seconds)
-      # Default: 60 seconds to ensure stable connection
-      - PRELOAD_TIME=60
+      # Default: 10 seconds (usually sufficient for stable connection)
+      - PRELOAD_TIME=10
       
-      # Time to sleep between screenshots (in seconds)
-      # Default: 60 seconds = 1 minute
-      # With 60s sleep, 1 day (24h) = 1440 screenshots = ~1 minute at 24fps
-      - SLEEP_TIME=60
+      # Total cycle time per screenshot (in seconds)
+      # Default: 60 seconds = 1 minute per cycle
+      # With 60s cycle, 1 day (24h) = 1440 screenshots = ~60 seconds at 24fps
+      # Note: Actual sleep time = CYCLE_TIME - PRELOAD_TIME
+      - CYCLE_TIME=60
       
       # Output image resolution
       - IMAGE_WIDTH=1920
