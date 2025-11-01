@@ -30,7 +30,7 @@ services:
     volumes:
       # Mount local directory to store screenshots
       # CHANGE THIS to your desired path
-      - ./screenshots:/screenshots
+      - ./screenshots:${SCREENSHOT_PATH:-/screenshots}
     
     # Optional: If your camera is on a specific network
     # network_mode: host
