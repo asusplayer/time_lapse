@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  timelapse-capture:
+    build: .
+    container_name: timelapse-capture
+    restart: unless-stopped
+    
+    environment:
+      # RTSP stream URL - CHANGE THIS to your stream URL
+      - RTSP_URL=rtsp://your-camera-ip:554/stream
+      
+      # Time to preload stream before capturing (in seconds)
+      # Default: 60 seconds to ensure stable connection
+      - PRELOAD_TIME=60
+      
+      # Time to sleep between screenshots (in seconds)
+      # Default: 60 seconds = 1 minute
+      # With 60s sleep, 1 day (24h) = 1440 screenshots = ~1 minute at 24fps
+      - SLEEP_TIME=60
+      
+      # Output image resolution
+      - IMAGE_WIDTH=1920
+      - IMAGE_HEIGHT=1080
+      
+      # Output directory inside container
+      - OUTPUT_DIR=/screenshots
+    
+    volumes:
+      # Mount local directory to store screenshots
+      # CHANGE THIS to your desired path
+      - ./screenshots:/screenshots
+    
+    # Optional: If your camera is on a specific network
+    # network_mode: host
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
