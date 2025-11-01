@@ -8,7 +8,7 @@ services:
     
     environment:
       # RTSP stream URL - CHANGE THIS to your stream URL
-      - RTSP_URL: ${RTSP_URL}
+      - RTSP_URL=${RTSP_URL:-rtsp://example.com/stream}
       
       # Time to preload stream before capturing (in seconds)
       # Default: 60 seconds to ensure stable connection
