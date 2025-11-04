@@ -10,27 +10,38 @@ services:
       # RTSP stream URL - CHANGE THIS to your stream URL
       - RTSP_URL=${RTSP_URL:-rtsp://example.com/stream}
       
-      # Time to preload stream before capturing (in seconds)
-      # Default: 10 seconds (usually sufficient for stable connection)
-      - PRELOAD_TIME=10
-      
-      # Total cycle time per screenshot (in seconds)
-      # Default: 60 seconds = 1 minute per cycle
-      # With 60s cycle, 1 day (24h) = 1440 screenshots = ~60 seconds at 24fps
-      # Note: Actual sleep time = CYCLE_TIME - PRELOAD_TIME
+      # Frame capture interval (in seconds)
+      # Default: 60 seconds = 1 frame per minute
       - CYCLE_TIME=60
       
-      # Output image resolution
-      - IMAGE_WIDTH=1920
-      - IMAGE_HEIGHT=1080
+      # Video output settings
+      # FPS for the final video (24 or 30 recommended)
+      - VIDEO_FPS=24
+      
+      # Video quality (CRF: 18-28, lower = better quality, 23 is default)
+      - VIDEO_QUALITY=23
+      
+      # Hours of real-time per video file (default: 24 hours)
+      # With 60s cycle: 24h = 1440 frames = 60s video at 24fps
+      - VIDEO_DURATION_HOURS=24
+      
+      # Keep temporary frames after video creation (true/false)
+      - KEEP_TEMP_FRAMES=false
+      
+      # Auto-migration settings
+      # Automatically migrate old PNG/JPG frames on first startup
+      - AUTO_MIGRATE=true
+      
+      # Delete old PNG/JPG frames after successful migration
+      - DELETE_OLD_FRAMES=true
       
       # Output directory inside container
-      - OUTPUT_DIR=/screenshots
+      - OUTPUT_DIR=/videos
     
     volumes:
-      # Mount local directory to store screenshots
+      # Mount local directory to store videos
       # CHANGE THIS to your desired path
-      - ${SCREENSHOT_PATH:-./screenshots}:/screenshots
+      - ${SCREENSHOT_PATH_PATH:-./videos}:/videos
     
     # Optional: If your camera is on a specific network
     # network_mode: host

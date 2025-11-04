@@ -12,14 +12,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
+# Copy application files
 COPY app.py .
+COPY migrate_frames.py .
+COPY start.py .
 
 # Create screenshots directory
 RUN mkdir -p /screenshots
 
-# Make the script executable
-RUN chmod +x app.py
+# Make scripts executable
+RUN chmod +x start.py
 
-# Run the application
-CMD ["python", "-u", "app.py"]
+# Run the smart startup script
+CMD ["python", "-u", "start.py"]

@@ -1,16 +1,18 @@
-# RTSP Time-lapse Screenshot Capture
+# RTSP Time-lapse Video Recorder
 
-A Docker-based service that captures screenshots from an RTSP stream at regular intervals using ffmpeg. Optimized for UDP streams and designed to create time-lapse videos where 1 day of real-time equals approximately 1 minute of video.
+A Docker-based service that records time-lapse videos directly from RTSP streams using ffmpeg. Records continuously and compiles frames into daily video files automatically. Optimized for minimal storage space - records 24 hours into ~50-100 MB video files.
 
 ## Features
 
-- 📸 Automated screenshot capture from RTSP streams
-- 🔄 Stream preloading for stable connections
-- 🐳 Fully containerized with Docker
-- 🎬 Optimized for time-lapse creation (1 day = ~1 minute)
+- 🎥 **Direct video recording** - No frame storage overhead
+- � **Automatic daily videos** - Creates video files for each time period
+- 💾 **98% space savings** - 5 GB/day → 50-100 MB/day
+- 🔄 **Continuous operation** - Records 24/7 without manual intervention
+- 🐳 **Fully containerized** with Docker
 - 📺 Uses ffmpeg for excellent UDP/RTSP stream handling
-- 🔧 Configurable via environment variables
+- 🔧 Configurable FPS, quality, and video duration
 - ☁️ TrueNAS Scale compatible
+- 🔄 **Migration tool** included for existing frames
 
 ## Quick Start
 
@@ -34,11 +36,14 @@ docker-compose up -d
 docker-compose logs -f timelapse-capture
 ```
 
-### 4. Check Screenshots
+### 4. Check Videos
 
-Screenshots will be saved in the `./screenshots` directory with timestamps:
-- Format: `screenshot_YYYYMMDD_HHMMSS.png`
-- Example: `screenshot_20251101_143022.png`
+Videos will be saved in the `./videos` directory with timestamps:
+- Format: `timelapse_YYYYMMDD_HHMMSS.mp4`
+- Example: `timelapse_20251104_000000.mp4`
+- Each file represents the configured duration (default: 24 hours)
+
+**First Run:** If you have old PNG/JPG frames in the directory, they will be automatically migrated to video format and then deleted.
 
 ## Configuration
 
@@ -47,27 +52,29 @@ All settings can be configured via environment variables in `docker-compose.yml`
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `RTSP_URL` | `rtsp://example.com/stream` | Your RTSP stream URL |
-| `PRELOAD_TIME` | `10` | Seconds to preload stream before capture |
-| `CYCLE_TIME` | `60` | Total seconds per complete cycle (preload + capture + sleep) |
-| `IMAGE_WIDTH` | `1920` | Screenshot width in pixels |
-| `IMAGE_HEIGHT` | `1080` | Screenshot height in pixels |
-| `OUTPUT_DIR` | `/screenshots` | Output directory (inside container) |
+| `CYCLE_TIME` | `60` | Seconds between each frame capture |
+| `VIDEO_FPS` | `24` | Frames per second in output video |
+| `VIDEO_QUALITY` | `23` | CRF quality (18-28, lower=better, 23=default) |
+| `VIDEO_DURATION_HOURS` | `24` | Real-time hours per video file |
+| `KEEP_TEMP_FRAMES` | `false` | Keep temporary frames after video creation |
+| `OUTPUT_DIR` | `/videos` | Output directory (inside container) |
 
 **Note:** Actual sleep time = `CYCLE_TIME - PRELOAD_TIME` (automatically calculated)
 
 ### Time-lapse Calculation
 
-With default settings (60-second cycle time):
-- **1 day** (24 hours) = 1,440 screenshots
-- At **24 fps**: 1,440 frames = **60 seconds** of video
-- At **30 fps**: 1,440 frames = **48 seconds** of video
+With default settings (60-second cycle, 24 fps output):
+- **24 hours** real-time = 1,440 frames captured
+- **Output video** = 60 seconds (1,440 frames ÷ 24 fps)
+- **File size** = ~50-100 MB (compressed H.264)
 
-To adjust the time-lapse ratio, modify `CYCLE_TIME`:
-- 30 seconds → 1 day = ~2 minutes of video
-- 120 seconds → 1 day = ~30 seconds of video
+To adjust the time compression, modify `CYCLE_TIME`:
+- **30 seconds** → 2,880 frames/day → 2 minutes of video
+- **120 seconds** → 720 frames/day → 30 seconds of video
 
 **Example:** For 1 day = 2 minutes of video at 24fps:
-- Set `CYCLE_TIME=30` (captures 2,880 screenshots per day)
+- Set `CYCLE_TIME=30` (captures 2,880 frames per day)
+- Output: 2,880 frames ÷ 24 fps = 120 seconds (2 minutes)
 
 ## TrueNAS Scale Deployment
 
@@ -94,7 +101,53 @@ To adjust the time-lapse ratio, modify `CYCLE_TIME`:
    - Use the "Launch Docker Image" option
    - Set image: `your-registry/timelapse-capture:latest`
    - Configure environment variables
-   - Mount host path for screenshots
+   - Mount host path for videos: `/mnt/your-pool/videos` → `/videos`
+
+## 🔄 Migrating from Frame-Based System
+
+**Good news!** Migration is now **automatic**! 
+
+When you deploy the new version:
+1. Service detects existing PNG/JPG frames
+2. Automatically converts them to videos
+3. Deletes old frames after successful conversion
+4. Starts normal video recording
+
+### Migration Settings
+
+Control migration behavior with environment variables:
+
+```yaml
+environment:
+  - AUTO_MIGRATE=true         # Auto-detect and migrate old frames
+  - DELETE_OLD_FRAMES=true    # Delete PNGs after migration
+```
+
+### Manual Migration
+
+If you prefer manual control, disable auto-migration:
+
+```yaml
+- AUTO_MIGRATE=false
+```
+
+Then run migration separately:
+```bash
+docker-compose -f docker-compose.migrate.yml up
+```
+
+See [MIGRATION.md](MIGRATION.md) for detailed manual migration instructions.
+
+## 📊 Storage Comparison
+
+**Old System (PNG frames):**
+- 1,440 frames/day × 3-5 MB = **~5-7 GB per day**
+- 30 days = **150-210 GB** 😱
+
+**New System (MP4 videos):**
+- 1 video/day × 50-100 MB = **~50-100 MB per day**
+- 30 days = **1.5-3 GB** ✨
+- **98% space savings!**
 
 ### Option 3: Using TrueNAS Scale Apps
 
@@ -128,51 +181,84 @@ network_mode: host
 
 ### Increasing Stability
 
-For unstable connections, increase the preload time:
+For unstable connections, increase the frame capture interval:
 ```yaml
-- PRELOAD_TIME=20  # 20 seconds preload
-- CYCLE_TIME=60    # Keep same cycle time
+- CYCLE_TIME=120  # 2 minutes between frames (slower, more stable)
 ```
-This gives more time for connection stability while maintaining the same screenshot frequency.
+
+### Improving Video Quality
+
+For better quality videos:
+```yaml
+- VIDEO_QUALITY=20  # Lower = better (18-28 range)
+- VIDEO_FPS=30      # Smoother playback
+```
+
+### Changing Video Duration
+
+Create shorter video files:
+```yaml
+- VIDEO_DURATION_HOURS=12  # 12-hour videos instead of 24-hour
+```
 
 ## Creating the Time-lapse Video
 
-Once you have screenshots, create a video using ffmpeg:
+Videos are automatically created! The system continuously records and compiles frames into video files.
+
+**To combine multiple daily videos into one:**
 
 ```bash
-# Navigate to screenshots directory
-cd screenshots
+# Navigate to videos directory
+cd videos
 
-# Create video at 24fps (1 day = ~60 seconds)
-ffmpeg -framerate 24 -pattern_type glob -i 'screenshot_*.png' \
-  -c:v libx264 -pix_fmt yuv420p -crf 23 timelapse.mp4
+# Create a file list
+ls timelapse_*.mp4 | sed 's/^/file /' > filelist.txt
 
-# Create video at 30fps (1 day = ~48 seconds)
-ffmpeg -framerate 30 -pattern_type glob -i 'screenshot_*.png' \
-  -c:v libx264 -pix_fmt yuv420p -crf 23 timelapse.mp4
+# Combine videos
+ffmpeg -f concat -safe 0 -i filelist.txt -c copy combined_timelapse.mp4
+
+# Or re-encode with custom settings
+ffmpeg -f concat -safe 0 -i filelist.txt \
+  -c:v libx264 -crf 23 -preset medium combined_timelapse.mp4
+```
+
+**To adjust playback speed:**
+
+```bash
+# Speed up 2x
+ffmpeg -i timelapse_20251104_000000.mp4 -filter:v "setpts=0.5*PTS" output_2x.mp4
+
+# Slow down 0.5x
+ffmpeg -i timelapse_20251104_000000.mp4 -filter:v "setpts=2*PTS" output_half.mp4
 ```
 
 ## Troubleshooting
 
-### No screenshots are being created
+### No videos are being created
 
 1. Check logs: `docker-compose logs -f`
 2. Verify RTSP URL is correct
-3. Test stream with ffmpeg: `ffmpeg -i rtsp://your-url -frames:v 1 test.png`
-4. Try using TCP or UDP depending on your camera
+3. Test stream with ffmpeg: `ffmpeg -i rtsp://your-url -frames:v 1 test.jpg`
+4. Ensure sufficient disk space
+5. Check temp_frames directory for accumulated frames
 
-### Connection timeout errors
+### Videos are choppy or low quality
 
-- Increase `PRELOAD_TIME` to 120+ seconds
-- Check network connectivity to camera
-- Verify firewall rules allow RTSP traffic
+- Increase `VIDEO_QUALITY` to 20 or lower (better quality, larger files)
+- Reduce `CYCLE_TIME` for more frames (smoother video)
+- Increase `VIDEO_FPS` to 30 for smoother playback
 
-### Black/corrupted screenshots
+### Running out of storage
 
-- Increase `PRELOAD_TIME` for better stream stability
-- Check if stream resolution matches `IMAGE_WIDTH`/`IMAGE_HEIGHT`
-- Verify camera is streaming at configured resolution
-- Try different quality settings in ffmpeg command
+- Increase `CYCLE_TIME` for fewer frames
+- Decrease `VIDEO_QUALITY` to 25-28 (smaller files)
+- Set up auto-deletion of old videos (use cron or TrueNAS tasks)
+
+### Container crashes or restarts
+
+- Check available memory
+- Reduce `FRAMES_PER_VIDEO` if running out of memory during compilation
+- Check logs for specific errors
 
 ## Building from Source
 

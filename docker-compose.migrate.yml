@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # One-time migration service to convert existing frames to videos
+  timelapse-migrate:
+    build: .
+    container_name: timelapse-migrate
+    
+    environment:
+      # Directory containing existing frames (PNG/JPG)
+      - FRAMES_DIR=/old_screenshots
+      
+      # Output directory for videos
+      - OUTPUT_DIR=/videos
+      
+      # Video settings (should match main service)
+      - VIDEO_FPS=24
+      - VIDEO_QUALITY=23
+      - FRAMES_PER_VIDEO=1440  # Frames per video file
+      
+      # Delete original frames after successful conversion (true/false)
+      - DELETE_FRAMES_AFTER=false
+    
+    volumes:
+      # Mount your existing screenshots directory (READ)
+      - ${OLD_SCREENSHOTS_PATH:-./screenshots}:/old_screenshots:ro
+      
+      # Mount output directory for videos (WRITE)
+      - ${VIDEO_PATH:-./videos}:/videos
+    
+    # Override the default command to run migration
+    command: python -u migrate_frames.py
+    
+    # Run once and stop
+    restart: "no"
