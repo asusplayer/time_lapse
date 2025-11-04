@@ -41,7 +41,7 @@ services:
     volumes:
       # Mount local directory to store videos
       # CHANGE THIS to your desired path
-      - ${SCREENSHOT_PATH_PATH:-./videos}:/videos
+      - ${SCREENSHOT_PATH:-./videos}:/videos
     
     # Optional: If your camera is on a specific network
     # network_mode: host
