@@ -8,6 +8,7 @@ import os
 import sys
 import logging
 import subprocess
+import shutil
 from pathlib import Path
 from datetime import datetime
 import re
@@ -161,12 +162,30 @@ def create_video_from_frames(frame_files, output_video, fps=24):
         )
         
         # Cleanup temporary files
-        frames_list_file.unlink()
-        for jpg_file in temp_dir.glob('*.jpg'):
-            # Only delete converted files, not originals
-            if jpg_file.parent == temp_dir:
-                jpg_file.unlink()
-        temp_dir.rmdir()
+        try:
+            if frames_list_file.exists():
+                frames_list_file.unlink()
+            
+            # Delete all converted JPG files in temp directory
+            for jpg_file in temp_dir.glob('*.jpg'):
+                try:
+                    jpg_file.unlink()
+                except Exception as e:
+                    logger.warning(f"Could not delete {jpg_file}: {e}")
+            
+            # Delete any other temp files
+            for temp_file in temp_dir.glob('*'):
+                try:
+                    if temp_file.is_file():
+                        temp_file.unlink()
+                except Exception as e:
+                    logger.warning(f"Could not delete {temp_file}: {e}")
+            
+            # Remove directory
+            if temp_dir.exists():
+                temp_dir.rmdir()
+        except Exception as e:
+            logger.warning(f"Cleanup warning: {e}")
         
         if result.returncode == 0:
             logger.info(f"✓ Video created successfully: {output_video}")
@@ -178,6 +197,14 @@ def create_video_from_frames(frame_files, output_video, fps=24):
             
     except Exception as e:
         logger.error(f"Error creating video: {e}")
+        # Try to cleanup even on error
+        try:
+            temp_dir = Path(FRAMES_DIR) / 'temp_conversion'
+            if temp_dir.exists():
+                import shutil
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        except:
+            pass
         return False
 
 
